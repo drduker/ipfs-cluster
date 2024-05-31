@@ -1,0 +1,59 @@
+replicaCount: 3
+persistence:
+  size: 10Gi
+# -- Private deployment - boolean
+private: true
+ipfs:
+  initScripts:
+    001-peers.sh: |-
+      #!/bin/sh
+      set -xe
+      echo "remove public connections"
+      ipfs bootstrap rm $(ipfs bootstrap list)
+    002-peers.sh: |-
+      #!/bin/sh
+      set -xe
+      while [ -z "$NODE1" ]; do
+          # Execute the nslookup command to get the IP address
+          NODE1=$(nslookup ipfs-ipfs-cluster-0.blockchain.svc.cluster.local | awk '/^Address: / { print $2 }')
+
+          # If NODE1 is still empty, sleep for a short duration before trying again
+          if [ -z "$NODE1" ]; then
+              echo "NODE1 is empty. Retrying in 5 seconds..."
+              sleep 5
+          fi
+      done
+      while [ -z "$NODE2" ]; do
+          # Execute the nslookup command to get the IP address
+          NODE2=$(nslookup ipfs-ipfs-cluster-1.blockchain.svc.cluster.local | awk '/^Address: / { print $2 }')
+          if [ -z "$NODE2" ]; then
+              echo "NODE2 is empty. Retrying in 5 seconds..."
+              sleep 5
+          fi
+      done
+      while [ -z "$NODE3" ]; do
+          # Execute the nslookup command to get the IP address
+          NODE3=$(nslookup ipfs-ipfs-cluster-2.blockchain.svc.cluster.local | awk '/^Address: / { print $2 }')
+          if [ -z "$NODE3" ]; then
+              echo "NODE3 is empty. Retrying in 5 seconds..."
+              sleep 5
+          fi
+      done
+      echo "node 1 is $NODE1"
+      echo "node 2 is $NODE2"
+      echo "node 3 is $NODE3"
+      if [ -f /data/ipfs/CLUSTER_ID0 ]; then
+        echo "Files exists"
+        CLUSTER_ID0=$(cat /data/ipfs/CLUSTER_ID0)
+        CLUSTER_ID1=$(cat /data/ipfs/CLUSTER_ID1)
+        CLUSTER_ID2=$(cat /data/ipfs/CLUSTER_ID2)
+        ipfs config Peering.Peers "[ { \"ID\": \"${CLUSTER_ID0}\", \"Addrs\": [ \"/ip4/${NODE1}/tcp/4001\" ] },{ \"ID\": \"${CLUSTER_ID1}\", \"Addrs\": [ \"/ip4/${NODE2}/tcp/4001\" ] },{ \"ID\": \"${CLUSTER_ID2}\", \"Addrs\": [ \"/ip4/${NODE3}/tcp/4001\" ] } ]" --json
+      else
+        echo "Clusters first need to come up once.  After clusters generate their own ID then the files will exist."
+      fi
+
+## Random secret generation example:  od  -vN 32 -An -tx1 /dev/urandom | tr -d ' \n' | base64 -w 0 -
+sharedSecret: "071602883772c7bfb6ec3d9175ac012da5fdb04e51a4cc4ce9148cac70054690"
+
+p2pNodePort:
+  enabled: false

@@ -1,0 +1,28 @@
+{{- if .Values.private }}
+{{- range $i, $n := (until (int .Values.replicaCount)) -}}
+{{- if ne $i 0 }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipfs-ipfs-cluster-{{ $i }}
+  labels:
+    {{- include "helm-ipfs-cluster.selectorLabels" $ | nindent 4 }}
+    nodeType: cluster
+spec:
+  type: {{ $.Values.cluster.service.type | default $.Values.service.type }}
+  ports:
+  - name: tcp-swarm
+    port: 4001
+    protocol: TCP
+    targetPort: 4001
+  selector:
+    app.kubernetes.io/instance: ipfs-cluster
+    app.kubernetes.io/name: ipfs-cluster
+    nodeType: ipfs
+    statefulset.kubernetes.io/pod-name: ipfs-ipfs-cluster-{{ $i }}
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}
+{{- end }}
