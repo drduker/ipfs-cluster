@@ -35,9 +35,9 @@ spec:
           kubectl exec cluster-2-ipfs-cluster-0 -n {{ .Release.Namespace }} -- sh -c "$sed_command"
 
           # TOUCH FILE TO IPFS NODES
-          kubectl exec ipfs-ipfs-cluster-0 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
-          kubectl exec ipfs-ipfs-cluster-1 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
-          kubectl exec ipfs-ipfs-cluster-2 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec {{ include "helm-ipfs-cluster.ipfs-name" . }}-0 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec {{ include "helm-ipfs-cluster.ipfs-name" . }}-1 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec {{ include "helm-ipfs-cluster.ipfs-name" . }}-2 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
           echo "Applying new configure by restarting nodes"
           kubectl delete pods -l app.kubernetes.io/name=ipfs-cluster -n {{ .Release.Namespace }}
           echo "Restarting cluster nodes only after 30 seconds to ensure they are all connecting and running..."
