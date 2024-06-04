@@ -15,33 +15,35 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - |-
+          set -e
           echo "checking to make sure all pods are in running state"
-          while kubectl get pods -n     namespace: {{ .Release.Namespace }} -l app.kubernetes.io/name=ipfs-cluster --no-headers | grep -v "Running"; do
+          while kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ .Release.Name }} --no-headers | grep -v "Running"; do
             sleep 2;
           done
           echo "Pods are now all in Running state."
           echo "Gathering config..."
-          CLUSTER_ID0=$(kubectl exec cluster-0-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
-          CLUSTER_ID1=$(kubectl exec cluster-1-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
-          CLUSTER_ID2=$(kubectl exec cluster-2-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
-
-          CLUSTER_IP0=$(kubectl exec cluster-1-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-0-ipfs-cluster.    namespace: {{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
-          CLUSTER_IP1=$(kubectl exec cluster-1-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-1-ipfs-cluster.    namespace: {{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
-          CLUSTER_IP2=$(kubectl exec cluster-1-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-2-ipfs-cluster.    namespace: {{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
-
+          echo "Gathering Cluster IDs"
+          CLUSTER_ID0=$(kubectl exec cluster-0-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
+          CLUSTER_ID1=$(kubectl exec cluster-1-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
+          CLUSTER_ID2=$(kubectl exec cluster-2-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'ipfs-cluster-ctl id | head -n1 | cut -d" " -f1')
+          echo "Gathering CLUSTER IPs from services"
+          CLUSTER_IP0=$(kubectl exec cluster-1-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-0-{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
+          CLUSTER_IP1=$(kubectl exec cluster-1-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-1-{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
+          CLUSTER_IP2=$(kubectl exec cluster-1-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c 'while [ -z "$NODE1" ]; do NODE1=$(nslookup cluster-2-{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local  | awk "/^Address: / { print \$2 }"); if [ -z "$NODE1" ]; then echo "NODE1 is empty. Retrying in 5 seconds..."; sleep 5; fi; done; echo "$NODE1"')
+          echo "Updating cluster peer addresses within /data/ipfs-cluster/service.json"
           sed_command='sed -i "s/\"peer_addresses\": \[\]/\"peer_addresses\": [\"\/ip4\/'$CLUSTER_IP0'\/tcp\/9096\/p2p\/'$CLUSTER_ID0'\", \"\/ip4\/'$CLUSTER_IP1'\/tcp\/9096\/p2p\/'$CLUSTER_ID1'\", \"\/ip4\/'$CLUSTER_IP2'\/tcp\/9096\/p2p\/'$CLUSTER_ID2'\"]/" /data/ipfs-cluster/service.json'
-          kubectl exec cluster-0-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c "$sed_command"
-          kubectl exec cluster-1-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c "$sed_command"
-          kubectl exec cluster-2-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c "$sed_command"
+          kubectl exec cluster-0-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c "$sed_command"
+          kubectl exec cluster-1-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c "$sed_command"
+          kubectl exec cluster-2-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c "$sed_command"
 
           # TOUCH FILE TO IPFS NODES
-          kubectl exec ipfs-ipfs-cluster-0 -n     namespace: {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
-          kubectl exec ipfs-ipfs-cluster-1 -n     namespace: {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
-          kubectl exec ipfs-ipfs-cluster-2 -n     namespace: {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec ipfs-{{ .Release.Name }}-0 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec ipfs-{{ .Release.Name }}-1 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
+          kubectl exec ipfs-{{ .Release.Name }}-2 -n {{ .Release.Namespace }} -- sh -c "echo "${CLUSTER_ID0}" > /data/ipfs/CLUSTER_ID0 && echo "${CLUSTER_ID1}" > /data/ipfs/CLUSTER_ID1 && echo "${CLUSTER_ID2}" > /data/ipfs/CLUSTER_ID2 && chown ipfs:users /data/ipfs/CLUSTER_ID*"
           echo "Applying new configure by restarting nodes"
-          kubectl delete pods -l app.kubernetes.io/name=ipfs-cluster -n     namespace: {{ .Release.Namespace }}
+          kubectl delete pods -l app.kubernetes.io/name={{ .Release.Name }} -n {{ .Release.Namespace }}
           echo "Restarting cluster nodes only after 30 seconds to ensure they are all connecting and running..."
           sleep 30 
-          kubectl delete pods -l nodeType=cluster -n     namespace: {{ .Release.Namespace }}
-  backoffLimit: 2  # Retry up to 3 times (default backoff strategy is used)
+          kubectl delete pods -l nodeType=cluster -n {{ .Release.Namespace }}
+  backoffLimit: 10  # Retry up to 3 times (default backoff strategy is used)
 {{- end }}
