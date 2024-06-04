@@ -23,6 +23,5 @@ spec:
     nodeType: ipfs
     statefulset.kubernetes.io/pod-name: ipfs-ipfs-cluster-{{ $i }}
   sessionAffinity: None
-  type: ClusterIP
 {{- end }}
 {{- end }}
